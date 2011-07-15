@@ -1,5 +1,6 @@
 /* main.c */
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,19 +16,29 @@ int m_x;
 int m_y;
 int left_button=0;
 int right_button=0;
+
+extern int flag_play;
+extern pthread_mutex_t play_mut;
+
 pthread_mutex_t button_mut;
+
 /*
 * mouse test
 */
-void* test_mouse(void* arg)
+void* test_mouse(void* q)
 {	
 	sleep(1);
 	fb_info fb_inf;
-	if (init_fb(&fb_inf) < 0)
+
+	fb_inf.w = ((fb_info *)q)->w;
+	fb_inf.h = ((fb_info *)q)->h;
+	fb_inf.bpp = ((fb_info *)q)->bpp;
+	fb_inf.fbmem = ((fb_info *)q)->fbmem;
+	/*if (init_fb(&fb_inf) < 0)
     {
     	 fprintf(stderr, "Error initial framebuffer\b");
     	 return NULL;
-    }
+    }*/
 
     int mfd = -1;
 
@@ -108,26 +119,37 @@ void* test_mouse(void* arg)
 /* main */
 int main(int argc, char *argv[]) 
 {
-    fb_info fb_inf;
-    pthread_t pid;
-
-    //pthread_create(&pid,NULL,get_time,NULL);
+	fb_info fb_inf;
 	
-    if (init_fb(&fb_inf) < 0)
-    {
-    	  fprintf(stderr, "Error initial framebuffer\b");
-    	  return -1;
-    }
-    pthread_create(&pid,NULL,test_mouse,NULL);
-	pthread_mutex_init(&button_mut,NULL);
-  #ifdef FRAME_SUPPORT_JPEG
-		//display_jpeg_transparent("GQ5.jpg","1024X768_1.jpg",fb_inf,0.3,0.7);
-		//while(1);
-		//sleep(2);
+	//pthread_t time_pid;
+	//pthread_create(&time_pid,NULL,get_time,NULL);
+	
+	if (init_fb(&fb_inf) < 0)
+	{
+		fprintf(stderr, "Error initial framebuffer\b");
+		return -1;
+	}
+	
+	//pthread_t mouse_pid;
+	//pthread_create(&mouse_pid,NULL,test_mouse,(void *)&fb_inf);
+	//pthread_mutex_init(&button_mut,NULL);
+
+	pthread_mutex_init(&play_mut,NULL);
+	pthread_t keyboard_pid;
+	pthread_create(&keyboard_pid,NULL,test_keyboard,NULL);
+
+	pthread_t play_pict_pid;
+	pthread_create(&play_pict_pid,NULL,play_picture,(void *)&fb_inf);
+	pthread_join(play_pict_pid,NULL);
+#ifdef FRAME_SUPPORT_JPEG
+#if 0
+		display_jpeg_transparent("GQ5.jpg","1024X768_1.jpg",fb_inf,0.3,0.7);
+		while(1);
+		sleep(2);
 start:	
 		
 		display_jpeg("GQ5.jpg", fb_inf);
-    		//sleep(1);
+    		sleep(1);
 		display_jpeg_decr("eggs.jpg", fb_inf,100,100,200,150);
 		display_jpeg_decr("1024X768_2.jpg", fb_inf,350,100,200,150);
 	
@@ -138,25 +160,7 @@ start:
 		display_jpeg_decr("GQ.jpg", fb_inf,350,450,200,150);
 	
 		display_jpeg_decr("GQ1.jpg", fb_inf,600,450,200,150);
-		
-		
-    		/*sleep(1);
 	
-    		display_jpeg_squarearea("GQ1.jpg", fb_inf);
-    		sleep(1);
-    	
-		display_jpeg_circle("1024X768_1.jpg", fb_inf);
-		sleep(1);
-		display_jpeg_slopline("1024X768_2.jpg", fb_inf);
-    		sleep(1);
-		display_jpeg_shut("1024X768_1.jpg", fb_inf);
-    		sleep(1);
-		display_jpeg_dot("GQ.jpg", fb_inf);
-		sleep(1);
-		display_jpeg_move("1024X768_2.jpg", fb_inf);
-    		sleep(1);
-		display_jpeg_block("1024X768_1.jpg", fb_inf);
-    		sleep(1);*/
 	while(1)
 	{
 		if(m_x >= 100 &&  m_x <= 300 && m_y >= 100 && m_y <= 250 ) 
@@ -487,7 +491,8 @@ start:
 		
 		
 	}
-  #endif
+#endif
+#endif
 #if 0
     /* draw a squarearea */
     fb_draw_squarearea(fb_inf, 0, 0, fb_inf.w, fb_inf.h, 0xFF0000);
@@ -505,7 +510,7 @@ start:
 	//fb_draw_upline(fb_inf, 1000,75,50, 0x0000FF00);
 #endif
 	
-  #ifdef FRAME_SUPPORT_FONT
+#ifdef FRAME_SUPPORT_FONT
     if (init_ft("simsun.ttc", 10) < 0)
     {
     	  fprintf(stderr, "Error initial font\b");
@@ -513,11 +518,11 @@ start:
     }
     
     //display_string ("北京 中关村", 10, fb_inf.h - 100, fb_inf,0x00FFFF00);
-  #endif
+#endif
     
-  #ifdef FRAME_SUPPORT_MOUSE
+#ifdef FRAME_SUPPORT_MOUSE
     //test_mouse(fb_inf);
-  #endif
+#endif
 
     munmap(fb_inf.fbmem, fb_inf.w * fb_inf.h * fb_inf.bpp / 8);
     

@@ -110,5 +110,9 @@ int fb_draw_ellipse(const fb_info fb_inf, int x, int y, int high, int width, u32
 int fb_draw_upline(fb_info fb_inf, int x,int y, int len, u32_t color);
 int fb_draw_rect(fb_info fb_inf, int x,int y, int high, int width, u32_t color);
 int fb_draw_slopline(fb_info fb_inf, int x,int y, int len, u32_t color);
-void* get_time(void*q);
+
+/*thread function*/
+void* get_time(void* q);
+void* test_keyboard(void* q);
+void* play_picture(void* q);
 #endif /* _FRAME_H_ */
